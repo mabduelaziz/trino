@@ -41,6 +41,8 @@ import io.trino.filesystem.local.LocalFileSystemConfig;
 import io.trino.filesystem.local.LocalFileSystemFactory;
 import io.trino.filesystem.memory.MemoryFileSystemCache;
 import io.trino.filesystem.memory.MemoryFileSystemCacheModule;
+import io.trino.filesystem.oss.OssFileSystemFactory;
+import io.trino.filesystem.oss.OssFileSystemModule;
 import io.trino.filesystem.s3.FileSystemS3;
 import io.trino.filesystem.s3.S3FileSystemModule;
 import io.trino.filesystem.switching.SwitchingFileSystemFactory;
@@ -120,6 +122,11 @@ public class FileSystemModule
         if (config.isNativeGcsEnabled()) {
             install(new GcsFileSystemModule());
             factories.addBinding("gs").to(GcsFileSystemFactory.class);
+        }
+
+        if (config.isNativeOssEnabled()) {
+            install(new OssFileSystemModule());
+            factories.addBinding("oss").to(OssFileSystemFactory.class);
         }
 
         if (config.isNativeLocalEnabled()) {

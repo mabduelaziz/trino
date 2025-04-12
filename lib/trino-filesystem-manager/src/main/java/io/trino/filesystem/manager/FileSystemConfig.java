@@ -24,6 +24,7 @@ public class FileSystemConfig
     private boolean nativeGcsEnabled;
     private boolean nativeLocalEnabled;
     private boolean cacheEnabled;
+    private boolean nativeOssEnabled;
 
     public boolean isHadoopEnabled()
     {
@@ -107,5 +108,15 @@ public class FileSystemConfig
     {
         this.cacheEnabled = enabled;
         return this;
+    }
+
+    public boolean isNativeOssEnabled()
+    {
+        return nativeOssEnabled;
+    }
+
+    public void setNativeOssEnabled(boolean nativeOssEnabled)
+    {
+        this.nativeOssEnabled = nativeOssEnabled;
     }
 }

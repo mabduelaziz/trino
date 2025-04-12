@@ -36,6 +36,7 @@ public class FileSystemSpoolingConfig
     private boolean pruningEnabled = true;
     private Duration pruningInterval = new Duration(5, MINUTES);
     private long pruningBatchSize = 250;
+    private boolean ossEnabled;
 
     public boolean isAzureEnabled()
     {
@@ -199,6 +200,18 @@ public class FileSystemSpoolingConfig
     public boolean locationEndsWithSlash()
     {
         return location.endsWith("/");
+    }
+
+    public boolean isOssEnabled()
+    {
+        return ossEnabled;
+    }
+
+    @Config("fs.oss.enabled")
+    public FileSystemSpoolingConfig setOssEnabled(boolean ossEnabled)
+    {
+        this.ossEnabled = ossEnabled;
+        return this;
     }
 
     public enum Layout

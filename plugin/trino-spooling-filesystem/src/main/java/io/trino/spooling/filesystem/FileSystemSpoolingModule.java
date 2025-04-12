@@ -25,6 +25,8 @@ import io.trino.filesystem.azure.AzureFileSystemFactory;
 import io.trino.filesystem.azure.AzureFileSystemModule;
 import io.trino.filesystem.gcs.GcsFileSystemFactory;
 import io.trino.filesystem.gcs.GcsFileSystemModule;
+import io.trino.filesystem.oss.OssFileSystemFactory;
+import io.trino.filesystem.oss.OssFileSystemModule;
 import io.trino.filesystem.s3.S3FileSystemFactory;
 import io.trino.filesystem.s3.S3FileSystemModule;
 import io.trino.filesystem.switching.SwitchingFileSystemFactory;
@@ -71,6 +73,10 @@ public class FileSystemSpoolingModule
         if (config.isGcsEnabled()) {
             install(new GcsFileSystemModule());
             factories.addBinding("gs").to(GcsFileSystemFactory.class);
+        }
+        if (config.isOssEnabled()) {
+            install(new OssFileSystemModule());
+            factories.addBinding("oss").to(OssFileSystemFactory.class);
         }
         binder.bind(SpoolingManager.class).to(FileSystemSpoolingManager.class).in(Scopes.SINGLETON);
 

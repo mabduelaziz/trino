@@ -43,6 +43,7 @@ public interface EncryptionHeadersTranslator
             case "s3" -> new S3EncryptionHeadersTranslator();
             case "gs" -> new GcsEncryptionHeadersTranslator();
             case "abfs" -> new AzureEncryptionHeadersTranslator();
+            case "oss" -> new OssEncryptionHeadersTranslator();
             default -> throw new IllegalArgumentException("Unknown file system scheme: " + scheme);
         };
 
