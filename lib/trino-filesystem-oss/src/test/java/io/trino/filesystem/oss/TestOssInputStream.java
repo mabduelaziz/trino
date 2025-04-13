@@ -15,7 +15,7 @@ package io.trino.filesystem.oss;
 
 import org.junit.jupiter.api.Test;
 
-class OssInputStreamTest
+class TestOssInputStream
 {
     @Test
     public void testEmptyTestToBeImplemented()
