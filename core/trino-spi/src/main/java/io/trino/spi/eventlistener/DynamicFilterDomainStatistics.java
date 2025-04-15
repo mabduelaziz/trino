@@ -11,25 +11,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.trino.execution.buffer;
+package io.trino.spi.eventlistener;
 
-import io.airlift.slice.Slice;
-import io.trino.spi.Page;
-import io.trino.spi.metrics.Metrics;
+import java.time.Duration;
+import java.util.Optional;
 
-public interface PageSerializer
+import static java.util.Objects.requireNonNull;
+
+public record DynamicFilterDomainStatistics(
+        String dynamicFilterId,
+        String simplifiedDomain,
+        Optional<Duration> collectionDuration)
 {
-    Slice serialize(Page page);
-
-    long getRetainedSizeInBytes();
-
-    default Metrics getMetrics()
+    public DynamicFilterDomainStatistics
     {
-        return Metrics.EMPTY;
-    }
-
-    default Metrics getAndResetMetrics()
-    {
-        return getMetrics();
+        requireNonNull(dynamicFilterId, "dynamicFilterId is null");
+        requireNonNull(simplifiedDomain, "simplifiedDomain is null");
+        requireNonNull(collectionDuration, "collectionDuration is null");
     }
 }
