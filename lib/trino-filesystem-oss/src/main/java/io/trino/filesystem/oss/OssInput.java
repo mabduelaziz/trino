@@ -13,6 +13,7 @@
  */
 package io.trino.filesystem.oss;
 
+import com.aliyun.oss.OSSClient;
 import io.trino.filesystem.TrinoInput;
 
 import java.io.IOException;
@@ -20,6 +21,8 @@ import java.io.IOException;
 final class OssInput
         implements TrinoInput
 {
+    private OSSClient ossClient;
+
     @Override
     public void readFully(long position, byte[] buffer, int bufferOffset, int bufferLength)
             throws IOException
@@ -39,5 +42,15 @@ final class OssInput
             throws IOException
     {
         throw new UnsupportedOperationException("readFully not supported");
+    }
+
+    public OSSClient getOssClient()
+    {
+        return ossClient;
+    }
+
+    public void setOssClient(OSSClient ossClient)
+    {
+        this.ossClient = ossClient;
     }
 }
