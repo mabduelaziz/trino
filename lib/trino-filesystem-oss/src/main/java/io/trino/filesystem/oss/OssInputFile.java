@@ -13,6 +13,8 @@
  */
 package io.trino.filesystem.oss;
 
+import com.aliyun.oss.OSS;
+import com.aliyun.oss.model.OSSObject;
 import io.trino.filesystem.Location;
 import io.trino.filesystem.TrinoInput;
 import io.trino.filesystem.TrinoInputFile;
@@ -20,48 +22,98 @@ import io.trino.filesystem.TrinoInputStream;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.util.Optional;
+import java.util.OptionalLong;
+
+import static java.util.Objects.requireNonNull;
 
 public class OssInputFile
         implements TrinoInputFile
 {
+    private final Location location;
+    private final OSS client;
+    private final String bucket;
+    private final String key;
+    private final OptionalLong length;
+    private final Optional<Instant> lastModified;
+
+    public OssInputFile(Location location, OSS client, String bucket, String key, OptionalLong length, Optional<Instant> lastModified)
+    {
+        this.location = requireNonNull(location, "location is null");
+        this.client = requireNonNull(client, "client is null");
+        this.bucket = requireNonNull(bucket, "bucket is null");
+        this.key = requireNonNull(key, "key is null");
+        this.length = requireNonNull(length, "length is null");
+        this.lastModified = requireNonNull(lastModified, "lastModified is null");
+    }
+
     @Override
     public TrinoInput newInput()
             throws IOException
     {
-        throw new UnsupportedOperationException("newInput not supported");
+        return new OssInput(location, client, bucket, key);
     }
 
     @Override
     public TrinoInputStream newStream()
             throws IOException
     {
-        throw new UnsupportedOperationException("newStream not supported");
+        return new OssInputStream(location, client, bucket, key);
     }
 
     @Override
     public long length()
             throws IOException
     {
-        throw new UnsupportedOperationException("length not supported");
+        if (length.isPresent()) {
+            return length.getAsLong();
+        }
+        try {
+            OSSObject object = client.getObject(bucket, key);
+            return object.getObjectMetadata().getContentLength();
+        }
+        catch (Exception e) {
+            throw new IOException("Failed to get length for file: " + location, e);
+        }
     }
 
     @Override
     public Instant lastModified()
             throws IOException
     {
-        throw new UnsupportedOperationException("lastModified not supported");
+        if (lastModified.isPresent()) {
+            return lastModified.get();
+        }
+        try {
+            OSSObject object = client.getObject(bucket, key);
+            return object.getObjectMetadata().getLastModified().toInstant();
+        }
+        catch (Exception e) {
+            throw new IOException("Failed to get last modified time for file: " + location, e);
+        }
     }
 
     @Override
     public boolean exists()
             throws IOException
     {
-        throw new UnsupportedOperationException("exists not supported");
+        try {
+            return client.doesObjectExist(bucket, key);
+        }
+        catch (Exception e) {
+            throw new IOException("Failed to check existence for file: " + location, e);
+        }
     }
 
     @Override
     public Location location()
     {
-        throw new UnsupportedOperationException("location not supported");
+        return location;
+    }
+
+    @Override
+    public String toString()
+    {
+        return location.toString();
     }
 }

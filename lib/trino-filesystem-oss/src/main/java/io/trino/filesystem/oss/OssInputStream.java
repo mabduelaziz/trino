@@ -13,31 +13,122 @@
  */
 package io.trino.filesystem.oss;
 
+import com.aliyun.oss.OSS;
+import com.aliyun.oss.model.OSSObject;
+import io.trino.filesystem.Location;
 import io.trino.filesystem.TrinoInputStream;
 
 import java.io.IOException;
+import java.io.InputStream;
+
+import static java.util.Objects.requireNonNull;
 
 public class OssInputStream
         extends TrinoInputStream
 {
+    private final Location location;
+    private final OSS client;
+    private final String bucket;
+    private final String key;
+    private OSSObject object;
+    private InputStream inputStream;
+    private volatile boolean closed;
+
+    public OssInputStream(Location location, OSS client, String bucket, String key)
+    {
+        this.location = requireNonNull(location, "location is null");
+        this.client = requireNonNull(client, "client is null");
+        this.bucket = requireNonNull(bucket, "bucket is null");
+        this.key = requireNonNull(key, "key is null");
+    }
+
     @Override
     public long getPosition()
             throws IOException
     {
-        return 0;
+        ensureOpen();
+        return 0; // OSS streams don't track position
     }
 
     @Override
     public void seek(long position)
             throws IOException
     {
-        throw new UnsupportedOperationException("seek: not implemented");
+        ensureOpen();
+        if (position < 0) {
+            throw new IOException("Invalid position: " + position);
+        }
+        if (position > 0) {
+            throw new IOException("Seeking not supported for OSS streams");
+        }
     }
 
     @Override
     public int read()
             throws IOException
     {
-        return 0;
+        ensureOpen();
+        try {
+            if (inputStream == null) {
+                object = client.getObject(bucket, key);
+                inputStream = object.getObjectContent();
+            }
+            return inputStream.read();
+        }
+        catch (Exception e) {
+            throw new IOException("Failed to read from file: " + location, e);
+        }
+    }
+
+    @Override
+    public int read(byte[] buffer, int offset, int length)
+            throws IOException
+    {
+        ensureOpen();
+        try {
+            if (inputStream == null) {
+                object = client.getObject(bucket, key);
+                inputStream = object.getObjectContent();
+            }
+            return inputStream.read(buffer, offset, length);
+        }
+        catch (Exception e) {
+            throw new IOException("Failed to read from file: " + location, e);
+        }
+    }
+
+    @Override
+    public void close()
+            throws IOException
+    {
+        if (closed) {
+            return;
+        }
+        closed = true;
+        try {
+            if (inputStream != null) {
+                inputStream.close();
+            }
+            if (object != null) {
+                object.close();
+            }
+        }
+        catch (Exception e) {
+            throw new IOException("Failed to close stream for file: " + location, e);
+        }
+    }
+
+    private void ensureOpen()
+            throws IOException
+    {
+        if (closed) {
+            throw new IOException("Stream closed: " + location);
+        }
+    }
+
+    @Override
+    public String toString()
+    {
+        return location.toString();
     }
 }

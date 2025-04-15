@@ -13,44 +13,102 @@
  */
 package io.trino.filesystem.oss;
 
-import com.aliyun.oss.OSSClient;
+import com.aliyun.oss.OSS;
+import com.aliyun.oss.model.OSSObject;
+import io.trino.filesystem.Location;
 import io.trino.filesystem.TrinoInput;
 
 import java.io.IOException;
+import java.io.InputStream;
+
+import static java.util.Objects.requireNonNull;
 
 final class OssInput
         implements TrinoInput
 {
-    private OSSClient ossClient;
+    private final Location location;
+    private final OSS client;
+    private final String bucket;
+    private final String key;
+    private volatile boolean closed;
+
+    public OssInput(Location location, OSS client, String bucket, String key)
+    {
+        this.location = requireNonNull(location, "location is null");
+        this.client = requireNonNull(client, "client is null");
+        this.bucket = requireNonNull(bucket, "bucket is null");
+        this.key = requireNonNull(key, "key is null");
+    }
 
     @Override
     public void readFully(long position, byte[] buffer, int bufferOffset, int bufferLength)
             throws IOException
     {
-        throw new UnsupportedOperationException("readFully not supported");
+        ensureOpen();
+        try (OSSObject object = client.getObject(bucket, key)) {
+            try (InputStream inputStream = object.getObjectContent()) {
+                inputStream.skip(position);
+                int bytesRead = 0;
+                while (bytesRead < bufferLength) {
+                    int n = inputStream.read(buffer, bufferOffset + bytesRead, bufferLength - bytesRead);
+                    if (n == -1) {
+                        throw new IOException("End of stream reached before reading all bytes");
+                    }
+                    bytesRead += n;
+                }
+            }
+        }
+        catch (Exception e) {
+            throw new IOException("Failed to read file: " + location, e);
+        }
     }
 
     @Override
     public int readTail(byte[] buffer, int bufferOffset, int bufferLength)
             throws IOException
     {
-        return 0;
+        ensureOpen();
+        try (OSSObject object = client.getObject(bucket, key)) {
+            long fileSize = object.getObjectMetadata().getContentLength();
+            long startPosition = Math.max(0, fileSize - bufferLength);
+            int readLength = (int) Math.min(bufferLength, fileSize);
+
+            try (InputStream inputStream = object.getObjectContent()) {
+                inputStream.skip(startPosition);
+                int bytesRead = 0;
+                while (bytesRead < readLength) {
+                    int n = inputStream.read(buffer, bufferOffset + bytesRead, readLength - bytesRead);
+                    if (n == -1) {
+                        break;
+                    }
+                    bytesRead += n;
+                }
+                return bytesRead;
+            }
+        }
+        catch (Exception e) {
+            throw new IOException("Failed to read tail of file: " + location, e);
+        }
     }
 
     @Override
     public void close()
             throws IOException
     {
-        throw new UnsupportedOperationException("readFully not supported");
+        closed = true;
     }
 
-    public OSSClient getOssClient()
+    private void ensureOpen()
+            throws IOException
     {
-        return ossClient;
+        if (closed) {
+            throw new IOException("Input stream closed: " + location);
+        }
     }
 
-    public void setOssClient(OSSClient ossClient)
+    @Override
+    public String toString()
     {
-        this.ossClient = ossClient;
+        return location.toString();
     }
 }
