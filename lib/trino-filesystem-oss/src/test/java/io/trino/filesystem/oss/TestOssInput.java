@@ -13,12 +13,137 @@
  */
 package io.trino.filesystem.oss;
 
+import com.aliyun.oss.OSS;
+import com.aliyun.oss.model.OSSObject;
+import com.aliyun.oss.model.ObjectMetadata;
+import io.trino.filesystem.Location;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 
-public class TestOssInput
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.when;
+
+class TestOssInput
 {
-    @Test
-    public void testEmptyTestToBeImplemented()
+    private static final String TEST_BUCKET = "test-bucket";
+    private static final String TEST_KEY = "test-key";
+
+    @Mock
+    private OSS ossClient;
+    @Mock
+    private OSSObject ossObject;
+    private Location location;
+    private String bucket;
+    private String key;
+    private OssInput input;
+
+    @BeforeEach
+    void setUp()
+            throws Exception
     {
+        MockitoAnnotations.openMocks(this);
+        URI uri = new URI("oss://" + TEST_BUCKET + "/" + TEST_KEY);
+        location = Location.of(uri.toString());
+        bucket = "test-bucket";
+        key = "test-key";
+    }
+
+    @Test
+    void testReadFully()
+            throws IOException
+    {
+        byte[] testData = "test data".getBytes(StandardCharsets.UTF_8);
+        ByteArrayInputStream byteStream = new ByteArrayInputStream(testData);
+
+        when(ossClient.getObject(bucket, key)).thenReturn(ossObject);
+        when(ossObject.getObjectContent()).thenReturn(byteStream);
+
+        input = new OssInput(location, ossClient, bucket, key);
+        byte[] buffer = new byte[testData.length];
+        input.readFully(0, buffer, 0, buffer.length);
+    }
+
+    @Test
+    void testReadTail()
+            throws IOException
+    {
+        byte[] testData = "test data".getBytes(StandardCharsets.UTF_8);
+        ByteArrayInputStream byteStream = new ByteArrayInputStream(testData);
+        ObjectMetadata metadata = new ObjectMetadata();
+        metadata.setContentLength(testData.length);
+
+        when(ossClient.getObject(bucket, key)).thenReturn(ossObject);
+        when(ossObject.getObjectContent()).thenReturn(byteStream);
+        when(ossObject.getObjectMetadata()).thenReturn(metadata);
+
+        input = new OssInput(location, ossClient, bucket, key);
+        byte[] buffer = new byte[4];
+        input.readTail(buffer, 0, buffer.length);
+    }
+
+    @Test
+    void testReadFullyError()
+    {
+        when(ossClient.getObject(bucket, key)).thenThrow(new RuntimeException("Test error"));
+
+        input = new OssInput(location, ossClient, bucket, key);
+        byte[] buffer = new byte[10];
+        assertThatThrownBy(() -> input.readFully(0, buffer, 0, buffer.length))
+                .isInstanceOf(IOException.class)
+                .hasMessageContaining("Failed to read file");
+    }
+
+    @Test
+    void testReadTailError()
+    {
+        when(ossClient.getObject(bucket, key)).thenThrow(new RuntimeException("Test error"));
+
+        input = new OssInput(location, ossClient, bucket, key);
+        byte[] buffer = new byte[10];
+        assertThatThrownBy(() -> input.readTail(buffer, 0, buffer.length))
+                .isInstanceOf(IOException.class)
+                .hasMessageContaining("Failed to read tail of file");
+    }
+
+    @Test
+    void testReadSuccessfully()
+            throws IOException
+    {
+        byte[] testData = "test data".getBytes(StandardCharsets.UTF_8);
+        ByteArrayInputStream byteStream = new ByteArrayInputStream(testData);
+
+        when(ossClient.getObject(bucket, key)).thenReturn(ossObject);
+        when(ossObject.getObjectContent()).thenReturn(byteStream);
+
+        input = new OssInput(location, ossClient, bucket, key);
+        byte[] buffer = new byte[testData.length];
+        input.readFully(0, buffer, 0, buffer.length);
+        assertThat(buffer).isEqualTo(testData);
+    }
+
+    @Test
+    void testReadWithOffset()
+            throws IOException
+    {
+        byte[] testData = "test data".getBytes(StandardCharsets.UTF_8);
+        ByteArrayInputStream byteStream = new ByteArrayInputStream(testData);
+
+        when(ossClient.getObject(bucket, key)).thenReturn(ossObject);
+        when(ossObject.getObjectContent()).thenReturn(byteStream);
+
+        input = new OssInput(location, ossClient, bucket, key);
+        byte[] buffer = new byte[4];
+        input.readFully(0, buffer, 1, 3);
+        assertThat(buffer[1]).isEqualTo(testData[0]);
+        assertThat(buffer[2]).isEqualTo(testData[1]);
+        assertThat(buffer[3]).isEqualTo(testData[2]);
     }
 }
