@@ -13,47 +13,87 @@
  */
 package io.trino.filesystem.oss;
 
+import com.aliyun.oss.OSS;
+import com.aliyun.oss.model.ObjectMetadata;
 import io.trino.filesystem.Location;
 import io.trino.filesystem.TrinoOutputFile;
 import io.trino.memory.context.AggregatedMemoryContext;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+
+import static java.util.Objects.requireNonNull;
 
 public class OssOutputFile
         implements TrinoOutputFile
 {
+    private final Location location;
+    private final OSS client;
+    private final String bucket;
+    private final String key;
+
+    public OssOutputFile(Location location, OSS client, String bucket, String key)
+    {
+        this.location = requireNonNull(location, "location is null");
+        this.client = requireNonNull(client, "client is null");
+        this.bucket = requireNonNull(bucket, "bucket is null");
+        this.key = requireNonNull(key, "key is null");
+    }
+
     @Override
     public OutputStream create()
             throws IOException
     {
-        throw new UnsupportedOperationException("create not supported");
+        return new OssOutputStream(location, client, bucket, key);
     }
 
     @Override
     public void createOrOverwrite(byte[] data)
             throws IOException
     {
-        throw new UnsupportedOperationException("createOrOverwrite not supported");
+        try {
+            ObjectMetadata metadata = new ObjectMetadata();
+            metadata.setContentLength(data.length);
+            client.putObject(bucket, key, new ByteArrayInputStream(data), metadata);
+        }
+        catch (Exception e) {
+            throw new IOException("Failed to write file: " + location, e);
+        }
     }
 
     @Override
     public void createExclusive(byte[] data)
             throws IOException
     {
-        throw new UnsupportedOperationException("createExclusive not supported");
+        try {
+            if (client.doesObjectExist(bucket, key)) {
+                throw new IOException("File already exists: " + location);
+            }
+            createOrOverwrite(data);
+        }
+        catch (Exception e) {
+            throw new IOException("Failed to write file: " + location, e);
+        }
     }
 
     @Override
     public OutputStream create(AggregatedMemoryContext memoryContext)
             throws IOException
     {
-        throw new UnsupportedOperationException("create with memoryContext not supported");
+        // Memory context is not used in OSS implementation
+        return create();
     }
 
     @Override
     public Location location()
     {
-        throw new UnsupportedOperationException("location not supported");
+        return location;
+    }
+
+    @Override
+    public String toString()
+    {
+        return location.toString();
     }
 }
