@@ -40,9 +40,7 @@ class TestOssInput
     private OSS ossClient;
     @Mock
     private OSSObject ossObject;
-    private Location location;
-    private String bucket;
-    private String key;
+    private OssLocation location;
     private OssInput input;
 
     @BeforeEach
@@ -51,9 +49,7 @@ class TestOssInput
     {
         MockitoAnnotations.openMocks(this);
         URI uri = new URI("oss://" + TEST_BUCKET + "/" + TEST_KEY);
-        location = Location.of(uri.toString());
-        bucket = "test-bucket";
-        key = "test-key";
+        location = new OssLocation(Location.of(uri.toString()));
     }
 
     @Test
@@ -63,10 +59,10 @@ class TestOssInput
         byte[] testData = "test data".getBytes(StandardCharsets.UTF_8);
         ByteArrayInputStream byteStream = new ByteArrayInputStream(testData);
 
-        when(ossClient.getObject(bucket, key)).thenReturn(ossObject);
+        when(ossClient.getObject(location.bucket(), location.key())).thenReturn(ossObject);
         when(ossObject.getObjectContent()).thenReturn(byteStream);
 
-        input = new OssInput(location, ossClient, bucket, key);
+        input = new OssInput(location, ossClient);
         byte[] buffer = new byte[testData.length];
         input.readFully(0, buffer, 0, buffer.length);
     }
@@ -80,11 +76,11 @@ class TestOssInput
         ObjectMetadata metadata = new ObjectMetadata();
         metadata.setContentLength(testData.length);
 
-        when(ossClient.getObject(bucket, key)).thenReturn(ossObject);
+        when(ossClient.getObject(location.bucket(), location.key())).thenReturn(ossObject);
         when(ossObject.getObjectContent()).thenReturn(byteStream);
         when(ossObject.getObjectMetadata()).thenReturn(metadata);
 
-        input = new OssInput(location, ossClient, bucket, key);
+        input = new OssInput(location, ossClient);
         byte[] buffer = new byte[4];
         input.readTail(buffer, 0, buffer.length);
     }
@@ -92,9 +88,9 @@ class TestOssInput
     @Test
     void testReadFullyError()
     {
-        when(ossClient.getObject(bucket, key)).thenThrow(new RuntimeException("Test error"));
+        when(ossClient.getObject(location.bucket(), location.key())).thenThrow(new RuntimeException("Test error"));
 
-        input = new OssInput(location, ossClient, bucket, key);
+        input = new OssInput(location, ossClient);
         byte[] buffer = new byte[10];
         assertThatThrownBy(() -> input.readFully(0, buffer, 0, buffer.length))
                 .isInstanceOf(IOException.class)
@@ -104,9 +100,9 @@ class TestOssInput
     @Test
     void testReadTailError()
     {
-        when(ossClient.getObject(bucket, key)).thenThrow(new RuntimeException("Test error"));
+        when(ossClient.getObject(location.bucket(), location.key())).thenThrow(new RuntimeException("Test error"));
 
-        input = new OssInput(location, ossClient, bucket, key);
+        input = new OssInput(location, ossClient);
         byte[] buffer = new byte[10];
         assertThatThrownBy(() -> input.readTail(buffer, 0, buffer.length))
                 .isInstanceOf(IOException.class)
@@ -120,10 +116,10 @@ class TestOssInput
         byte[] testData = "test data".getBytes(StandardCharsets.UTF_8);
         ByteArrayInputStream byteStream = new ByteArrayInputStream(testData);
 
-        when(ossClient.getObject(bucket, key)).thenReturn(ossObject);
+        when(ossClient.getObject(location.bucket(), location.key())).thenReturn(ossObject);
         when(ossObject.getObjectContent()).thenReturn(byteStream);
 
-        input = new OssInput(location, ossClient, bucket, key);
+        input = new OssInput(location, ossClient);
         byte[] buffer = new byte[testData.length];
         input.readFully(0, buffer, 0, buffer.length);
         assertThat(buffer).isEqualTo(testData);
@@ -136,10 +132,10 @@ class TestOssInput
         byte[] testData = "test data".getBytes(StandardCharsets.UTF_8);
         ByteArrayInputStream byteStream = new ByteArrayInputStream(testData);
 
-        when(ossClient.getObject(bucket, key)).thenReturn(ossObject);
+        when(ossClient.getObject(location.bucket(), location.key())).thenReturn(ossObject);
         when(ossObject.getObjectContent()).thenReturn(byteStream);
 
-        input = new OssInput(location, ossClient, bucket, key);
+        input = new OssInput(location, ossClient);
         byte[] buffer = new byte[4];
         input.readFully(0, buffer, 1, 3);
         assertThat(buffer[1]).isEqualTo(testData[0]);

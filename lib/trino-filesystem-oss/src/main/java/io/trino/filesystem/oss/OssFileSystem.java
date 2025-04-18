@@ -73,25 +73,19 @@ public class OssFileSystem
     @Override
     public TrinoInputFile newInputFile(Location location)
     {
-        String bucket = getBucketFromLocation(location);
-        String key = getKeyFromLocation(location);
-        return new OssInputFile(location, client, bucket, key, OptionalLong.empty(), Optional.empty());
+        return new OssInputFile(new OssLocation(location), client, OptionalLong.empty(), Optional.empty());
     }
 
     @Override
     public TrinoInputFile newInputFile(Location location, long length)
     {
-        String bucket = getBucketFromLocation(location);
-        String key = getKeyFromLocation(location);
-        return new OssInputFile(location, client, bucket, key, OptionalLong.of(length), Optional.empty());
+        return new OssInputFile(new OssLocation(location), client, OptionalLong.of(length), Optional.empty());
     }
 
     @Override
     public TrinoInputFile newInputFile(Location location, long length, Instant lastModified)
     {
-        String bucket = getBucketFromLocation(location);
-        String key = getKeyFromLocation(location);
-        return new OssInputFile(location, client, bucket, key, OptionalLong.of(length), Optional.of(lastModified));
+        return new OssInputFile(new OssLocation(location), client, OptionalLong.of(length), Optional.of(lastModified));
     }
 
     @Override
@@ -118,9 +112,7 @@ public class OssFileSystem
     @Override
     public TrinoOutputFile newOutputFile(Location location)
     {
-        String bucket = getBucketFromLocation(location);
-        String key = getKeyFromLocation(location);
-        return new OssOutputFile(location, client, bucket, key);
+        return new OssOutputFile(new OssLocation(location), client);
     }
 
     @Override
@@ -135,11 +127,10 @@ public class OssFileSystem
             throws IOException
     {
         location.verifyValidFileLocation();
-        String bucket = getBucketFromLocation(location);
-        String key = getKeyFromLocation(location);
+        OssLocation ossLocation = new OssLocation(location);
 
         try {
-            client.deleteObject(bucket, key);
+            client.deleteObject(ossLocation.bucket(), ossLocation.key());
         }
         catch (Exception e) {
             throw new TrinoFileSystemException("Failed to delete file: " + location, e);
@@ -150,7 +141,8 @@ public class OssFileSystem
     public void deleteDirectory(Location location)
             throws IOException
     {
-        FileIterator iterator = listObjects(location, true);
+        OssLocation ossLocation = new OssLocation(location);
+        FileIterator iterator = listObjects(ossLocation, true);
         while (iterator.hasNext()) {
             List<Location> files = new ArrayList<>();
             while ((files.size() < 1000) && iterator.hasNext()) {
@@ -172,9 +164,10 @@ public class OssFileSystem
             throws IOException
     {
         SetMultimap<String, String> bucketToKeys = locations.stream()
+                .map(OssLocation::new)
                 .collect(toMultimap(
-                        this::getBucketFromLocation,
-                        this::getKeyFromLocation,
+                        OssLocation::bucket,
+                        OssLocation::key,
                         HashMultimap::create));
 
         Map<String, String> failures = new HashMap<>();
@@ -216,20 +209,18 @@ public class OssFileSystem
     public FileIterator listFiles(Location location)
             throws IOException
     {
-        return listObjects(location, false);
+        return listObjects(new OssLocation(location), false);
     }
 
-    private FileIterator listObjects(Location location, boolean includeDirectoryObjects)
+    private FileIterator listObjects(OssLocation location, boolean includeDirectoryObjects)
             throws IOException
     {
-        String bucket = getBucketFromLocation(location);
-        String key = getKeyFromLocation(location);
-
+        String key = location.key();
         if (!key.isEmpty() && !key.endsWith("/")) {
             key += "/";
         }
 
-        ListObjectsRequest request = new ListObjectsRequest(bucket);
+        ListObjectsRequest request = new ListObjectsRequest(location.bucket());
         request.setPrefix(key);
 
         try {
@@ -238,7 +229,7 @@ public class OssFileSystem
             if (!includeDirectoryObjects) {
                 objectStream = objectStream.filter(object -> !object.getKey().endsWith("/"));
             }
-            return new OssFileIterator(location, objectStream.iterator());
+            return new OssFileIterator(location.baseLocation(), objectStream.iterator());
         }
         catch (Exception e) {
             throw new TrinoFileSystemException("Failed to list location: " + location, e);
@@ -249,8 +240,8 @@ public class OssFileSystem
     public Optional<Boolean> directoryExists(Location location)
             throws IOException
     {
-        validateOssLocation(location);
-        if (location.path().isEmpty() || listFiles(location).hasNext()) {
+        OssLocation ossLocation = new OssLocation(location);
+        if (ossLocation.key().isEmpty() || listFiles(location).hasNext()) {
             return Optional.of(true);
         }
         return Optional.empty();
@@ -259,7 +250,6 @@ public class OssFileSystem
     @Override
     public void createDirectory(Location location)
     {
-        validateOssLocation(location);
         // OSS does not have directories
     }
 
@@ -274,14 +264,13 @@ public class OssFileSystem
     public Set<Location> listDirectories(Location location)
             throws IOException
     {
-        String bucket = getBucketFromLocation(location);
-        String key = getKeyFromLocation(location);
-
+        OssLocation ossLocation = new OssLocation(location);
+        String key = ossLocation.key();
         if (!key.isEmpty() && !key.endsWith("/")) {
             key += "/";
         }
 
-        ListObjectsRequest request = new ListObjectsRequest(bucket);
+        ListObjectsRequest request = new ListObjectsRequest(ossLocation.bucket());
         request.setPrefix(key);
         request.setDelimiter("/");
 
@@ -299,7 +288,6 @@ public class OssFileSystem
     @Override
     public Optional<Location> createTemporaryDirectory(Location targetPath, String temporaryPrefix, String relativePrefix)
     {
-        validateOssLocation(targetPath);
         // OSS does not have directories
         return Optional.empty();
     }
@@ -322,12 +310,10 @@ public class OssFileSystem
             throws IOException
     {
         location.verifyValidFileLocation();
-        String bucket = getBucketFromLocation(location);
-        String objectKey = getKeyFromLocation(location);
-
+        OssLocation ossLocation = OssLocation.of(location);
         try {
             Date expiration = Date.from(Instant.now().plusMillis(ttl.toMillis()));
-            URI uri = client.generatePresignedUrl(bucket, objectKey, expiration).toURI();
+            URI uri = client.generatePresignedUrl(ossLocation.bucket(), ossLocation.key(), expiration).toURI();
             return Optional.of(new UriLocation(uri, Map.of()));
         }
         catch (URISyntaxException e) {
@@ -338,30 +324,9 @@ public class OssFileSystem
         }
     }
 
-    private String getBucketFromLocation(Location location)
-    {
-        String path = location.path();
-        int firstSlash = path.indexOf('/');
-        return firstSlash == -1 ? path : path.substring(0, firstSlash);
-    }
-
-    private String getKeyFromLocation(Location location)
-    {
-        String path = location.path();
-        int firstSlash = path.indexOf('/');
-        return firstSlash == -1 ? "" : path.substring(firstSlash + 1);
-    }
-
     private record OssFileIterator(Location baseLocation, Iterator<OSSObjectSummary> iterator)
             implements FileIterator
     {
-        private static String getBucketFromLocation(Location location)
-        {
-            String path = location.path();
-            int firstSlash = path.indexOf('/');
-            return firstSlash == -1 ? path : path.substring(0, firstSlash);
-        }
-
         @Override
         public boolean hasNext()
         {

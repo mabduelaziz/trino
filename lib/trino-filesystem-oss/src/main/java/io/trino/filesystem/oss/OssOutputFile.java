@@ -28,24 +28,20 @@ import static java.util.Objects.requireNonNull;
 public class OssOutputFile
         implements TrinoOutputFile
 {
-    private final Location location;
+    private final OssLocation location;
     private final OSS client;
-    private final String bucket;
-    private final String key;
 
-    public OssOutputFile(Location location, OSS client, String bucket, String key)
+    public OssOutputFile(OssLocation location, OSS client)
     {
         this.location = requireNonNull(location, "location is null");
         this.client = requireNonNull(client, "client is null");
-        this.bucket = requireNonNull(bucket, "bucket is null");
-        this.key = requireNonNull(key, "key is null");
     }
 
     @Override
     public OutputStream create()
             throws IOException
     {
-        return new OssOutputStream(location, client, bucket, key);
+        return new OssOutputStream(location, client);
     }
 
     @Override
@@ -55,7 +51,7 @@ public class OssOutputFile
         try {
             ObjectMetadata metadata = new ObjectMetadata();
             metadata.setContentLength(data.length);
-            client.putObject(bucket, key, new ByteArrayInputStream(data), metadata);
+            client.putObject(location.bucket(), location.key(), new ByteArrayInputStream(data), metadata);
         }
         catch (Exception e) {
             throw new IOException("Failed to write file: " + location, e);
@@ -67,7 +63,7 @@ public class OssOutputFile
             throws IOException
     {
         try {
-            if (client.doesObjectExist(bucket, key)) {
+            if (client.doesObjectExist(location.bucket(), location.key())) {
                 throw new IOException("File already exists: " + location);
             }
             createOrOverwrite(data);
@@ -88,7 +84,7 @@ public class OssOutputFile
     @Override
     public Location location()
     {
-        return location;
+        return location.location();
     }
 
     @Override

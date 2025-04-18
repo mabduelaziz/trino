@@ -43,7 +43,7 @@ class TestOssOutputStream
 
     @Mock
     private OSS ossClient;
-    private Location location;
+    private OssLocation location;
     private OssOutputStream outputStream;
 
     @BeforeEach
@@ -52,7 +52,7 @@ class TestOssOutputStream
     {
         MockitoAnnotations.openMocks(this);
         URI uri = new URI("oss://" + TEST_BUCKET + "/" + TEST_KEY);
-        location = Location.of(uri.toString());
+        location = new OssLocation(Location.of(uri.toString()));
 
         // Mock multipart upload initiation
         InitiateMultipartUploadResult initResult = new InitiateMultipartUploadResult();
@@ -75,7 +75,7 @@ class TestOssOutputStream
         when(ossClient.completeMultipartUpload(any(CompleteMultipartUploadRequest.class)))
                 .thenReturn(completeResult);
 
-        outputStream = new OssOutputStream(location, ossClient, TEST_BUCKET, TEST_KEY);
+        outputStream = new OssOutputStream(location, ossClient);
         byte[] data = "test data".getBytes(StandardCharsets.UTF_8);
         outputStream.write(data);
         outputStream.close();
@@ -99,7 +99,7 @@ class TestOssOutputStream
         when(ossClient.completeMultipartUpload(any(CompleteMultipartUploadRequest.class)))
                 .thenReturn(completeResult);
 
-        outputStream = new OssOutputStream(location, ossClient, TEST_BUCKET, TEST_KEY);
+        outputStream = new OssOutputStream(location, ossClient);
         byte[] data = "test data".getBytes(StandardCharsets.UTF_8);
         outputStream.write(data, 2, 4);
         outputStream.close();
@@ -115,7 +115,7 @@ class TestOssOutputStream
         when(ossClient.uploadPart(any(UploadPartRequest.class)))
                 .thenThrow(new RuntimeException("Test error"));
 
-        outputStream = new OssOutputStream(location, ossClient, TEST_BUCKET, TEST_KEY);
+        outputStream = new OssOutputStream(location, ossClient);
         byte[] data = "test data".getBytes(StandardCharsets.UTF_8);
 
         assertThatThrownBy(() -> {
@@ -147,7 +147,7 @@ class TestOssOutputStream
         when(ossClient.initiateMultipartUpload(any(InitiateMultipartUploadRequest.class)))
                 .thenReturn(initResult);
 
-        outputStream = new OssOutputStream(location, ossClient, TEST_BUCKET, TEST_KEY);
+        outputStream = new OssOutputStream(location, ossClient);
         byte[] data = new byte[5 * 1024 * 1024]; // 5MB to trigger multipart upload
         outputStream.write(data);
         outputStream.close();
@@ -172,7 +172,7 @@ class TestOssOutputStream
         uploadResult.setETag("test-etag");
         when(ossClient.uploadPart(any(UploadPartRequest.class))).thenReturn(uploadResult);
 
-        outputStream = new OssOutputStream(location, ossClient, TEST_BUCKET, TEST_KEY);
+        outputStream = new OssOutputStream(location, ossClient);
         byte[] data = new byte[5 * 1024 * 1024]; // 5MB to trigger multipart upload
 
         assertThatThrownBy(() -> {
@@ -199,7 +199,7 @@ class TestOssOutputStream
         uploadResult.setETag("test-etag");
         when(ossClient.uploadPart(any(UploadPartRequest.class))).thenReturn(uploadResult);
 
-        outputStream = new OssOutputStream(location, ossClient, TEST_BUCKET, TEST_KEY);
+        outputStream = new OssOutputStream(location, ossClient);
         byte[] data = new byte[5 * 1024 * 1024]; // 5MB to trigger multipart upload
         outputStream.write(data);
         outputStream.flush();

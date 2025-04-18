@@ -15,7 +15,6 @@ package io.trino.filesystem.oss;
 
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.model.OSSObject;
-import io.trino.filesystem.Location;
 import io.trino.filesystem.TrinoInput;
 
 import java.io.IOException;
@@ -26,18 +25,15 @@ import static java.util.Objects.requireNonNull;
 final class OssInput
         implements TrinoInput
 {
-    private final Location location;
+    private final OssLocation location;
     private final OSS client;
-    private final String bucket;
-    private final String key;
     private volatile boolean closed;
 
-    public OssInput(Location location, OSS client, String bucket, String key)
+    public OssInput(OssLocation location, OSS client)
     {
         this.location = requireNonNull(location, "location is null");
         this.client = requireNonNull(client, "client is null");
-        this.bucket = requireNonNull(bucket, "bucket is null");
-        this.key = requireNonNull(key, "key is null");
+        location.location().verifyValidFileLocation();
     }
 
     @Override
@@ -45,7 +41,7 @@ final class OssInput
             throws IOException
     {
         ensureOpen();
-        try (OSSObject object = client.getObject(bucket, key)) {
+        try (OSSObject object = client.getObject(location.bucket(), location.key())) {
             try (InputStream inputStream = object.getObjectContent()) {
                 inputStream.skip(position);
                 int bytesRead = 0;
@@ -68,7 +64,7 @@ final class OssInput
             throws IOException
     {
         ensureOpen();
-        try (OSSObject object = client.getObject(bucket, key)) {
+        try (OSSObject object = client.getObject(location.bucket(), location.key())) {
             long fileSize = object.getObjectMetadata().getContentLength();
             long startPosition = Math.max(0, fileSize - bufferLength);
             int readLength = (int) Math.min(bufferLength, fileSize);

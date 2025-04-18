@@ -43,7 +43,7 @@ class TestOssInputStream
     @Mock
     private OSSObject ossObject;
 
-    private Location location;
+    private OssLocation location;
     private String bucket;
     private String key;
     private OssInputStream inputStream;
@@ -54,7 +54,7 @@ class TestOssInputStream
     {
         MockitoAnnotations.openMocks(this);
         URI uri = new URI("oss://" + TEST_BUCKET + "/" + TEST_KEY);
-        location = Location.of(uri.toString());
+        location = new OssLocation(Location.of(uri.toString()));
         bucket = "test-bucket";
         key = "test-key";
     }
@@ -69,7 +69,7 @@ class TestOssInputStream
         when(ossClient.getObject(bucket, key)).thenReturn(ossObject);
         when(ossObject.getObjectContent()).thenReturn(byteStream);
 
-        inputStream = new OssInputStream(location, ossClient, bucket, key);
+        inputStream = new OssInputStream(location, ossClient);
         byte[] buffer = new byte[testData.length];
         int bytesRead = inputStream.read(buffer);
 
@@ -87,7 +87,7 @@ class TestOssInputStream
         when(ossClient.getObject(bucket, key)).thenReturn(ossObject);
         when(ossObject.getObjectContent()).thenReturn(byteStream);
 
-        inputStream = new OssInputStream(location, ossClient, bucket, key);
+        inputStream = new OssInputStream(location, ossClient);
         byte[] buffer = new byte[4];
         int bytesRead = inputStream.read(buffer, 1, 3);
 
@@ -106,7 +106,7 @@ class TestOssInputStream
         when(ossClient.getObject(bucket, key)).thenReturn(ossObject);
         when(ossObject.getObjectContent()).thenReturn(byteStream);
 
-        inputStream = new OssInputStream(location, ossClient, bucket, key);
+        inputStream = new OssInputStream(location, ossClient);
         byte[] buffer = new byte[10];
         int bytesRead = inputStream.read(buffer);
 
@@ -118,7 +118,7 @@ class TestOssInputStream
     {
         when(ossClient.getObject(bucket, key)).thenThrow(new RuntimeException("Test error"));
 
-        inputStream = new OssInputStream(location, ossClient, bucket, key);
+        inputStream = new OssInputStream(location, ossClient);
         byte[] buffer = new byte[10];
         assertThatThrownBy(() -> inputStream.read(buffer))
                 .isInstanceOf(IOException.class)
@@ -133,7 +133,7 @@ class TestOssInputStream
         when(ossClient.getObject(bucket, key)).thenReturn(ossObject);
         when(ossObject.getObjectContent()).thenReturn(mockStream);
 
-        inputStream = new OssInputStream(location, ossClient, bucket, key);
+        inputStream = new OssInputStream(location, ossClient);
         inputStream.close();
         // Verify close is called on the underlying stream
         // This will be handled by Mockito verification
@@ -143,7 +143,7 @@ class TestOssInputStream
     void testSeek()
             throws IOException
     {
-        inputStream = new OssInputStream(location, ossClient, bucket, key);
+        inputStream = new OssInputStream(location, ossClient);
         assertThatThrownBy(() -> inputStream.seek(1))
                 .isInstanceOf(IOException.class)
                 .hasMessageContaining("Seeking not supported for OSS streams");
@@ -153,7 +153,7 @@ class TestOssInputStream
     void testGetPosition()
             throws IOException
     {
-        inputStream = new OssInputStream(location, ossClient, bucket, key);
+        inputStream = new OssInputStream(location, ossClient);
         assertThat(inputStream.getPosition()).isEqualTo(0);
     }
 }

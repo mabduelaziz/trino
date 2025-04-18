@@ -30,19 +30,15 @@ import static java.util.Objects.requireNonNull;
 public class OssInputFile
         implements TrinoInputFile
 {
-    private final Location location;
+    private final OssLocation location;
     private final OSS client;
-    private final String bucket;
-    private final String key;
     private final OptionalLong length;
     private final Optional<Instant> lastModified;
 
-    public OssInputFile(Location location, OSS client, String bucket, String key, OptionalLong length, Optional<Instant> lastModified)
+    public OssInputFile(OssLocation location, OSS client, OptionalLong length, Optional<Instant> lastModified)
     {
         this.location = requireNonNull(location, "location is null");
         this.client = requireNonNull(client, "client is null");
-        this.bucket = requireNonNull(bucket, "bucket is null");
-        this.key = requireNonNull(key, "key is null");
         this.length = requireNonNull(length, "length is null");
         this.lastModified = requireNonNull(lastModified, "lastModified is null");
     }
@@ -51,14 +47,14 @@ public class OssInputFile
     public TrinoInput newInput()
             throws IOException
     {
-        return new OssInput(location, client, bucket, key);
+        return new OssInput(location, client);
     }
 
     @Override
     public TrinoInputStream newStream()
             throws IOException
     {
-        return new OssInputStream(location, client, bucket, key);
+        return new OssInputStream(location, client);
     }
 
     @Override
@@ -69,7 +65,7 @@ public class OssInputFile
             return length.getAsLong();
         }
         try {
-            OSSObject object = client.getObject(bucket, key);
+            OSSObject object = client.getObject(location.bucket(), location.key());
             return object.getObjectMetadata().getContentLength();
         }
         catch (Exception e) {
@@ -85,7 +81,7 @@ public class OssInputFile
             return lastModified.get();
         }
         try {
-            OSSObject object = client.getObject(bucket, key);
+            OSSObject object = client.getObject(location.bucket(), location.key());
             return object.getObjectMetadata().getLastModified().toInstant();
         }
         catch (Exception e) {
@@ -98,7 +94,7 @@ public class OssInputFile
             throws IOException
     {
         try {
-            return client.doesObjectExist(bucket, key);
+            return client.doesObjectExist(location.bucket(), location.key());
         }
         catch (Exception e) {
             throw new IOException("Failed to check existence for file: " + location, e);
@@ -108,7 +104,7 @@ public class OssInputFile
     @Override
     public Location location()
     {
-        return location;
+        return location.location();
     }
 
     @Override

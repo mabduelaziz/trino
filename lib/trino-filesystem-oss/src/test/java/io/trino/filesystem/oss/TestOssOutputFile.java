@@ -41,7 +41,7 @@ class TestOssOutputFile
 
     @Mock
     private OSS ossClient;
-    private Location location;
+    private OssLocation location;
     private OssOutputFile outputFile;
 
     @BeforeEach
@@ -50,21 +50,14 @@ class TestOssOutputFile
     {
         MockitoAnnotations.openMocks(this);
         URI uri = new URI("oss://" + TEST_BUCKET + "/" + TEST_KEY);
-        location = Location.of(uri.toString());
-    }
-
-    @Test
-    void testLocation()
-    {
-        outputFile = new OssOutputFile(location, ossClient, TEST_BUCKET, TEST_KEY);
-        assertThat(outputFile.location()).isEqualTo(location);
+        location = new OssLocation(Location.of(uri.toString()));
     }
 
     @Test
     void testCreate()
             throws IOException
     {
-        outputFile = new OssOutputFile(location, ossClient, TEST_BUCKET, TEST_KEY);
+        outputFile = new OssOutputFile(location, ossClient);
         OutputStream stream = outputFile.create();
         assertThat(stream).isInstanceOf(OssOutputStream.class);
     }
@@ -74,7 +67,7 @@ class TestOssOutputFile
             throws IOException
     {
         byte[] content = "test content".getBytes(StandardCharsets.UTF_8);
-        outputFile = new OssOutputFile(location, ossClient, TEST_BUCKET, TEST_KEY);
+        outputFile = new OssOutputFile(location, ossClient);
         outputFile.createOrOverwrite(content);
 
         // Verify that putObject was called with correct parameters
@@ -88,7 +81,7 @@ class TestOssOutputFile
         byte[] content = "test content".getBytes(StandardCharsets.UTF_8);
         when(ossClient.doesObjectExist(TEST_BUCKET, TEST_KEY)).thenReturn(false);
 
-        outputFile = new OssOutputFile(location, ossClient, TEST_BUCKET, TEST_KEY);
+        outputFile = new OssOutputFile(location, ossClient);
         outputFile.createExclusive(content);
 
         // Verify that putObject was called with correct parameters
@@ -100,7 +93,7 @@ class TestOssOutputFile
     {
         when(ossClient.doesObjectExist(TEST_BUCKET, TEST_KEY)).thenReturn(true);
 
-        outputFile = new OssOutputFile(location, ossClient, TEST_BUCKET, TEST_KEY);
+        outputFile = new OssOutputFile(location, ossClient);
         byte[] content = "test content".getBytes(StandardCharsets.UTF_8);
         assertThatThrownBy(() -> outputFile.createExclusive(content))
                 .isInstanceOf(IOException.class)

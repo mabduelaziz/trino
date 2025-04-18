@@ -21,7 +21,6 @@ import com.aliyun.oss.model.InitiateMultipartUploadResult;
 import com.aliyun.oss.model.PartETag;
 import com.aliyun.oss.model.UploadPartRequest;
 import com.aliyun.oss.model.UploadPartResult;
-import io.trino.filesystem.Location;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -35,22 +34,18 @@ import static java.util.Objects.requireNonNull;
 public class OssOutputStream
         extends OutputStream
 {
-    private final Location location;
+    private final OssLocation location;
     private final OSS client;
-    private final String bucket;
-    private final String key;
     private final ByteArrayOutputStream buffer;
     private final List<PartETag> partETags;
     private String uploadId;
     private int partNumber;
     private boolean closed;
 
-    public OssOutputStream(Location location, OSS client, String bucket, String key)
+    public OssOutputStream(OssLocation location, OSS client)
     {
         this.location = requireNonNull(location, "location is null");
         this.client = requireNonNull(client, "client is null");
-        this.bucket = requireNonNull(bucket, "bucket is null");
-        this.key = requireNonNull(key, "key is null");
         this.buffer = new ByteArrayOutputStream();
         this.partETags = new ArrayList<>();
         this.partNumber = 1;
@@ -91,18 +86,18 @@ public class OssOutputStream
                 uploadPart();
             }
             if (uploadId != null) {
-                CompleteMultipartUploadRequest request = new CompleteMultipartUploadRequest(bucket, key, uploadId, partETags);
+                CompleteMultipartUploadRequest request = new CompleteMultipartUploadRequest(location.bucket(), location.key(), uploadId, partETags);
                 client.completeMultipartUpload(request);
             }
             else if (buffer.size() > 0) {
                 // If the file is small enough, use simple upload
-                client.putObject(bucket, key, new ByteArrayInputStream(buffer.toByteArray()));
+                client.putObject(location.bucket(), location.key(), new ByteArrayInputStream(buffer.toByteArray()));
             }
         }
         catch (Exception e) {
             if (uploadId != null) {
                 try {
-                    AbortMultipartUploadRequest request = new AbortMultipartUploadRequest(bucket, key, uploadId);
+                    AbortMultipartUploadRequest request = new AbortMultipartUploadRequest(location.bucket(), location.key(), uploadId);
                     client.abortMultipartUpload(request);
                 }
                 catch (Exception ignored) {
@@ -118,7 +113,7 @@ public class OssOutputStream
     {
         try {
             if (uploadId == null) {
-                InitiateMultipartUploadRequest request = new InitiateMultipartUploadRequest(bucket, key);
+                InitiateMultipartUploadRequest request = new InitiateMultipartUploadRequest(location.bucket(), location.key());
                 InitiateMultipartUploadResult result = client.initiateMultipartUpload(request);
                 uploadId = result.getUploadId();
             }
@@ -126,7 +121,7 @@ public class OssOutputStream
             byte[] data = buffer.toByteArray();
             buffer.reset();
 
-            UploadPartRequest request = new UploadPartRequest(bucket, key, uploadId, partNumber, new ByteArrayInputStream(data), data.length);
+            UploadPartRequest request = new UploadPartRequest(location.bucket(), location.key(), uploadId, partNumber, new ByteArrayInputStream(data), data.length);
             UploadPartResult result = client.uploadPart(request);
             partETags.add(new PartETag(partNumber, result.getETag()));
             partNumber++;

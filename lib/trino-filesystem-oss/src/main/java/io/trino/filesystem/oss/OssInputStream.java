@@ -15,7 +15,6 @@ package io.trino.filesystem.oss;
 
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.model.OSSObject;
-import io.trino.filesystem.Location;
 import io.trino.filesystem.TrinoInputStream;
 
 import java.io.IOException;
@@ -26,20 +25,16 @@ import static java.util.Objects.requireNonNull;
 public class OssInputStream
         extends TrinoInputStream
 {
-    private final Location location;
+    private final OssLocation location;
     private final OSS client;
-    private final String bucket;
-    private final String key;
     private OSSObject object;
     private InputStream inputStream;
     private volatile boolean closed;
 
-    public OssInputStream(Location location, OSS client, String bucket, String key)
+    public OssInputStream(OssLocation location, OSS client)
     {
         this.location = requireNonNull(location, "location is null");
         this.client = requireNonNull(client, "client is null");
-        this.bucket = requireNonNull(bucket, "bucket is null");
-        this.key = requireNonNull(key, "key is null");
     }
 
     @Override
@@ -70,7 +65,7 @@ public class OssInputStream
         ensureOpen();
         try {
             if (inputStream == null) {
-                object = client.getObject(bucket, key);
+                object = client.getObject(location.bucket(), location.key());
                 inputStream = object.getObjectContent();
             }
             return inputStream.read();
@@ -87,7 +82,7 @@ public class OssInputStream
         ensureOpen();
         try {
             if (inputStream == null) {
-                object = client.getObject(bucket, key);
+                object = client.getObject(location.bucket(), location.key());
                 inputStream = object.getObjectContent();
             }
             return inputStream.read(buffer, offset, length);
