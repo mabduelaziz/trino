@@ -15,6 +15,9 @@ package io.trino.filesystem.oss;
 
 import com.google.inject.Binder;
 import com.google.inject.Module;
+import com.google.inject.Scopes;
+
+import static io.airlift.configuration.ConfigBinder.configBinder;
 
 public class OssFileSystemModule
         implements Module
@@ -22,6 +25,7 @@ public class OssFileSystemModule
     @Override
     public void configure(Binder binder)
     {
-        throw new UnsupportedOperationException("configure not supported");
+        configBinder(binder).bindConfig(OssFileSystemConfig.class);
+        binder.bind(OssFileSystemFactory.class).in(Scopes.SINGLETON);
     }
 }
