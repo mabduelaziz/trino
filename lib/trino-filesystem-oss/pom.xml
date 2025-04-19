@@ -65,6 +65,11 @@
         </dependency>
 
         <dependency>
+            <groupId>jakarta.annotation</groupId>
+            <artifactId>jakarta.annotation-api</artifactId>
+        </dependency>
+
+        <dependency>
             <groupId>jakarta.validation</groupId>
             <artifactId>jakarta.validation-api</artifactId>
         </dependency>
@@ -121,7 +126,7 @@
                         <artifactId>maven-surefire-plugin</artifactId>
                         <configuration>
                             <excludes>
-                                <exclude>**/TestS3FileSystem.java</exclude>
+                                <exclude>**/TestOssFileSystem.java</exclude>
                             </excludes>
                         </configuration>
                     </plugin>
@@ -138,7 +143,7 @@
                         <artifactId>maven-surefire-plugin</artifactId>
                         <configuration>
                             <includes>
-                                <include>**/TestS3FileSystem.java</include>
+                                <include>**/TestOssFileSystem.java</include>
                             </includes>
                         </configuration>
                     </plugin>

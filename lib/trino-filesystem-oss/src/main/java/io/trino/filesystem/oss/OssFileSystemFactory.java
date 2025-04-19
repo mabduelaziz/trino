@@ -13,16 +13,45 @@
  */
 package io.trino.filesystem.oss;
 
+import com.aliyun.oss.OSS;
+import com.aliyun.oss.OSSClientBuilder;
+import com.google.inject.Inject;
 import io.trino.filesystem.TrinoFileSystem;
 import io.trino.filesystem.TrinoFileSystemFactory;
 import io.trino.spi.security.ConnectorIdentity;
+import jakarta.annotation.PreDestroy;
+
+import static java.util.Objects.requireNonNull;
 
 public class OssFileSystemFactory
         implements TrinoFileSystemFactory
 {
+    private final OSS client;
+
+    @Inject
+    public OssFileSystemFactory(OssFileSystemConfig config)
+    {
+        this(config, new OSSClientBuilder());
+    }
+
+    // For testing
+    public OssFileSystemFactory(OssFileSystemConfig config, OSSClientBuilder builder)
+    {
+        requireNonNull(config, "config is null");
+        this.client = builder.build(config.getEndpoint(), config.getAccessKeyId(), config.getAccessKeySecret());
+    }
+
+    @PreDestroy
+    public void destroy()
+    {
+        if (client != null) {
+            client.shutdown();
+        }
+    }
+
     @Override
     public TrinoFileSystem create(ConnectorIdentity identity)
     {
-        throw new UnsupportedOperationException("create not supported");
+        return new OssFileSystem(client);
     }
 }

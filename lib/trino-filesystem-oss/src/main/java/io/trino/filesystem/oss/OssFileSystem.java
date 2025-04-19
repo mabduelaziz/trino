@@ -324,6 +324,11 @@ public class OssFileSystem
         }
     }
 
+    public OSS getClient()
+    {
+        return client;
+    }
+
     private record OssFileIterator(Location baseLocation, Iterator<OSSObjectSummary> iterator)
             implements FileIterator
     {
