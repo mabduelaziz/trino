@@ -5,7 +5,7 @@
     <parent>
         <groupId>io.airlift</groupId>
         <artifactId>airbase</artifactId>
-        <version>251</version>
+        <version>253</version>
     </parent>
 
     <groupId>io.trino</groupId>
@@ -190,7 +190,7 @@
         <dep.confluent.version>7.8.0</dep.confluent.version>
         <dep.docker.images.version>110</dep.docker.images.version>
         <dep.drift.version>1.22</dep.drift.version>
-        <dep.flyway.version>11.7.0</dep.flyway.version>
+        <dep.flyway.version>11.7.2</dep.flyway.version>
         <dep.frontend-maven-plugin.version>1.15.1</dep.frontend-maven-plugin.version>
         <dep.frontend-node.version>v22.14.0</dep.frontend-node.version>
         <dep.frontend-npm.version>11.2.0</dep.frontend-npm.version>
@@ -307,7 +307,7 @@
             <dependency>
                 <groupId>software.amazon.awssdk</groupId>
                 <artifactId>bom</artifactId>
-                <version>2.31.21</version>
+                <version>2.31.24</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -458,7 +458,7 @@
             <dependency>
                 <groupId>com.github.oshi</groupId>
                 <artifactId>oshi-core</artifactId>
-                <version>6.8.0</version>
+                <version>6.8.1</version>
             </dependency>
 
             <dependency>
@@ -906,13 +906,13 @@
             <dependency>
                 <groupId>io.projectreactor</groupId>
                 <artifactId>reactor-core</artifactId>
-                <version>3.7.4</version>
+                <version>3.7.5</version>
             </dependency>
 
             <dependency>
                 <groupId>io.projectreactor.netty</groupId>
                 <artifactId>reactor-netty-core</artifactId>
-                <version>1.1.28</version>
+                <version>1.1.29</version>
             </dependency>
 
             <!-- io.confluent:kafka-avro-serializer uses multiple versions of this transitive dependency -->
@@ -2051,7 +2051,7 @@
             <dependency>
                 <groupId>org.apache.orc</groupId>
                 <artifactId>orc-format</artifactId>
-                <version>1.0.0</version>
+                <version>1.1.0</version>
                 <classifier>shaded-protobuf</classifier>
             </dependency>
 
@@ -2718,21 +2718,6 @@
                                 </conflictingDependencies>
                                 <packages>
                                     <package>shaded.parquet.it.unimi.dsi.fastutil</package>
-                                </packages>
-                            </exception>
-                            <exception>
-                                <conflictingDependencies>
-                                    <dependency>
-                                        <groupId>org.apache.orc</groupId>
-                                        <artifactId>orc-core</artifactId>
-                                    </dependency>
-                                    <dependency>
-                                        <groupId>org.apache.orc</groupId>
-                                        <artifactId>orc-format</artifactId>
-                                    </dependency>
-                                </conflictingDependencies>
-                                <packages>
-                                    <package>org.apache.orc</package>
                                 </packages>
                             </exception>
                             <exception>
