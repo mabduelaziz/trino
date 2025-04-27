@@ -20,6 +20,8 @@ import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.trino.plugin.exchange.filesystem.azure.AzureBlobFileSystemExchangeStorage;
 import io.trino.plugin.exchange.filesystem.azure.ExchangeAzureConfig;
 import io.trino.plugin.exchange.filesystem.local.LocalFileSystemExchangeStorage;
+import io.trino.plugin.exchange.filesystem.oss.ExchangeOssConfig;
+import io.trino.plugin.exchange.filesystem.oss.OssFileSystemExchangeStorage;
 import io.trino.plugin.exchange.filesystem.s3.ExchangeS3Config;
 import io.trino.plugin.exchange.filesystem.s3.S3FileSystemExchangeStorage;
 import io.trino.plugin.exchange.filesystem.s3.S3FileSystemExchangeStorageStats;
@@ -67,6 +69,10 @@ public class FileSystemExchangeModule
         else if (ImmutableSet.of("abfs", "abfss").contains(scheme)) {
             binder.bind(FileSystemExchangeStorage.class).to(AzureBlobFileSystemExchangeStorage.class).in(Scopes.SINGLETON);
             configBinder(binder).bindConfig(ExchangeAzureConfig.class);
+        }
+        else if (ImmutableSet.of("oss").contains(scheme)) {
+            binder.bind(FileSystemExchangeStorage.class).to(OssFileSystemExchangeStorage.class).in(Scopes.SINGLETON);
+            configBinder(binder).bindConfig(ExchangeOssConfig.class);
         }
         else {
             binder.addError(new TrinoException(NOT_SUPPORTED,
